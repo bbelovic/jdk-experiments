@@ -28,4 +28,19 @@ public class GathererTest {
         ), actual);
 
     }
+
+    @Test
+    void testWindowSliced() {
+        List<List<Integer>> actual = Stream.of(1, 2, 3, 4)
+                .gather(Gatherers.windowSliding(2))
+                .toList();
+
+        List<List<Integer>> expected = List.of(
+                List.of(1, 2),
+                List.of(2, 3),
+                List.of(3, 4)
+        );
+
+        Assertions.assertEquals(expected, actual);
+    }
 }
