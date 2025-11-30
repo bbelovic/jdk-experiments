@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.stream.Gatherer;
 import java.util.stream.Gatherers;
 import java.util.stream.Stream;
 
@@ -42,5 +43,19 @@ public class GathererTest {
         );
 
         Assertions.assertEquals(expected, actual);
+    }
+
+    @Test
+    void testCustomMapGatherer() {
+        Gatherer.Integrator<Void, Integer, Integer> integrator =
+                (unused, element, result) -> result.push(element * 10);
+
+        Gatherer<Integer, ?, Integer> mapGatherer = Gatherer.of(integrator);
+
+
+        List<Integer> actual = Stream.of(1, 2, 3, 4)
+                .gather(mapGatherer)
+                .toList();
+        Assertions.assertEquals(List.of(10, 20, 30, 40), actual);
     }
 }
