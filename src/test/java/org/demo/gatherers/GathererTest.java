@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Gatherer;
 import java.util.stream.Gatherers;
 import java.util.stream.Stream;
@@ -57,5 +59,34 @@ public class GathererTest {
                 .gather(mapGatherer)
                 .toList();
         Assertions.assertEquals(List.of(10, 20, 30, 40), actual);
+    }
+
+    @Test
+    void testCustomMapMultiGatherer() {
+
+        Gatherer.Integrator<Void, List<Integer>, Integer> integrator =
+                (unused, element, downstream) -> {
+                    element.forEach(downstream::push);
+                    return !downstream.isRejecting();
+                };
+        Gatherer<List<Integer>, Void, Integer> mapMultiIntegrator = Gatherer.of(integrator);
+
+        var actual = Stream.of(List.of(1, 2), List.of(3, 4), List.of(5))
+//                .gather(mapMultiIntegrator)
+                .gather(mapMulti(Iterable::forEach))
+                .toList();
+
+        var expected = List.of(1, 2, 3, 4, 5);
+
+        Assertions.assertEquals(expected, actual);
+    }
+
+    <T, R> Gatherer<T, ?, R> mapMulti(BiConsumer<? super T, Consumer<? super R>> mapper) {
+        return Gatherer.of(
+                (unused, el, downstream) -> {
+                    mapper.accept(el, downstream::push);
+                    return !downstream.isRejecting();
+                }
+        );
     }
 }
