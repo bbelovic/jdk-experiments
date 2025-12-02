@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Gatherer;
@@ -59,6 +60,29 @@ public class GathererTest {
                 .gather(mapGatherer)
                 .toList();
         Assertions.assertEquals(List.of(10, 20, 30, 40), actual);
+    }
+
+    @Test
+    void testDeduplicate() {
+        class LastSeen {Integer lastSeen;}
+        Gatherer.Integrator<LastSeen, Integer, Integer> integrator =
+                (state, element, result) -> {
+            if (!Objects.equals(state.lastSeen, element)) {
+                result.push(element);
+                state.lastSeen = element;
+            }
+            return true;
+            };
+        var dedup = Gatherer.ofSequential(LastSeen::new, integrator);
+
+
+
+        var actual = Stream.of(1, 2, 3, 3, 4, 5, 5, 5, 6, 7, 5, 7, 0, 1, 1, 8 )
+                .gather(dedup)
+                .toList();
+
+        List<Integer> expected = List.of(1, 2, 3, 4, 5, 6, 7, 5, 7, 0, 1, 8);
+        Assertions.assertEquals(expected, actual);
     }
 
     @Test
