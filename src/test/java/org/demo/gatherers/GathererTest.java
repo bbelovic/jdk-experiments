@@ -1,10 +1,9 @@
 package org.demo.gatherers;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -13,9 +12,6 @@ import java.util.stream.Gatherer;
 import java.util.stream.Gatherers;
 import java.util.stream.Stream;
 
-/**
- * Unit test for simple App.
- */
 public class GathererTest {
 
     @Test
@@ -46,6 +42,99 @@ public class GathererTest {
         );
 
         Assertions.assertEquals(expected, actual);
+    }
+
+    @Test
+    void testConsecutiveGrouping()
+    {
+        var input = Stream.of(1, 1, 2, 2, 3, 3, 3, 4, 4);
+
+        var actualOutput = input
+                .gather(groupConsecutive())
+                .toList();
+
+        var expectedOutput = List.of(
+                List.of(1, 1),
+                List.of(2, 2),
+                List.of(3, 3, 3),
+                List.of(4, 4)
+        );
+        Assertions.assertEquals(expectedOutput, actualOutput);
+    }
+
+    private Gatherer<? super Integer, List<Integer>, List<Integer>> groupConsecutive() {
+        return Gatherer.ofSequential(
+                ArrayList::new,
+                (state, element, downstream) -> {
+                    if (!state.isEmpty() && !Objects.equals(state.getLast(), element)) {
+                        downstream.push(List.copyOf(state));
+                        state.clear();
+                    }
+                    state.add(element);
+                    return true;
+                },(objects, downstream) -> downstream.push(objects)
+        );
+    }
+
+    @Test
+    void testAdjacentPairs() {
+        var actual = Stream.of(1, 2, 3, 4, 5)
+                .gather(gatherAdjacent())
+                .toList();
+
+        var expected = List.of(
+                List.of(1, 2),
+                List.of(2, 3),
+                List.of(3, 4),
+                List.of(4, 5)
+        );
+
+        Assertions.assertEquals(expected, actual);
+    }
+
+    private Gatherer<? super Integer, List<Integer>, List<Integer>> gatherAdjacent() {
+        return Gatherer.ofSequential(
+                ArrayList::new,
+                (state, element, downstream) -> {
+                    state.addLast(element);
+                    if (state.size() == 2) {
+                     downstream.push(List.copyOf(state));
+                     state.removeFirst();
+                 }
+                    return true;
+                }
+        );
+    }
+
+    @Test
+    void testLastN()
+    {
+        var input = Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        var actual = input.gather(last(1))
+                .toList();
+        var expected = List.of(10);
+
+        Assertions.assertEquals(expected, actual);
+
+    }
+
+    private Gatherer<? super Integer, List<Integer>, Integer> last(int n) {
+        return Gatherer.ofSequential(
+                ArrayList::new,
+                (state, element, _) -> {
+                    if (state.size() == n) {
+                        state.add(element);
+                        state.removeFirst();
+                    } else {
+                        state.add(element);
+                    }
+                    return true;
+                }, (state, downstream) -> {
+                    for (var each: state) {
+                        downstream.push(each);
+                    }
+                }
+        );
     }
 
     @Test
@@ -113,4 +202,5 @@ public class GathererTest {
                 }
         );
     }
+
 }
